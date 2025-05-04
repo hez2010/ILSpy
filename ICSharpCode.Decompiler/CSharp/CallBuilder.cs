@@ -435,6 +435,29 @@ namespace ICSharpCode.Decompiler.CSharp
 						argumentList.GetArgumentResolveResults(), isExpandedForm: argumentList.IsExpandedForm, isDelegateInvocation: true));
 			}
 
+			if (settings.InlineArrays && method.DeclaringType.FullName == "<PrivateImplementationDetails>")
+			{
+				var unwrappedTarget = argumentList.Arguments[0].Expression;
+				if (unwrappedTarget is DirectionExpression dirExpr)
+					unwrappedTarget = dirExpr.Expression;
+				switch (method.Name)
+				{
+					case "InlineArrayAsSpan":
+					case "InlineArrayAsReadOnlySpan":
+						var arrayResolveResult = unwrappedTarget.GetResolveResult();
+						unwrappedTarget.RemoveAnnotations<ResolveResult>();
+						return unwrappedTarget.Detach().WithRR(new InlineArrayResolveResult(arrayResolveResult, method.ReturnType));
+					case "InlineArrayFirstElementRef":
+					case "InlineArrayFirstElementRefReadOnly":
+						return new IndexerExpression(unwrappedTarget.Detach(), new PrimitiveExpression(0))
+							.WithRR(new ResolveResult(method.ReturnType.UnwrapByRef()));
+					case "InlineArrayElementRef":
+					case "InlineArrayElementRefReadOnly":
+						return new IndexerExpression(unwrappedTarget.Detach(), argumentList.Arguments[1])
+							.WithRR(new ResolveResult(method.ReturnType.UnwrapByRef()));
+				}
+			}
+
 			if (settings.StringInterpolation && IsInterpolatedStringCreation(method, argumentList))
 			{
 				var result = HandleStringInterpolation(method, argumentList);

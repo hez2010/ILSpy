@@ -159,6 +159,10 @@ namespace ICSharpCode.Decompiler.CSharp
 					return ldVirtDelegate.Method;
 				}
 			}
+			if (rr is InlineArrayResolveResult iarr)
+			{
+				return iarr.ArrayType.GetSymbol();
+			}
 			return rr?.GetSymbol();
 		}
 
